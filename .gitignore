@@ -1,4 +1,16 @@
-.ipynb_checkpoints/
+# Modelo treinado (muito grande para o GitHub)
+models/
+
+# Cache do Python
 __pycache__/
 *.pyc
+
+# Ambiente virtual (se usar)
+venv/
 .env
+
+# Checkpoints do Jupyter
+.ipynb_checkpoints/
+
+# Cache do Streamlit
+.streamlit/
