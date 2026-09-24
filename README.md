@@ -1,99 +1,74 @@
-# JobMatch AI 🎯
+# 🧠 JobMatch AI — matching vaga × perfil com BERTimbau
 
-Sistema de matching entre currículo e vagas de emprego usando NLP e Deep Learning
-(fine-tuning de BERTimbau), aplicado ao meu próprio processo de busca por vaga
-júnior em Data Science.
-
-## Status do projeto: completo ✅
-
-## Etapas concluídas
-- [x] Definição da arquitetura e problema
-- [x] Coleta de 162 vagas reais (15 manuais + 147 via API Adzuna)
-- [x] Limpeza e padronização do dataset
-- [x] Análise Exploratória (EDA) — N=162
-- [x] Tokenização com BERTimbau — validação de limite de tokens
-- [x] Embeddings semânticos e visualização (PCA + UMAP)
-- [x] Fine-tuning supervisionado do BERTimbau
-- [x] Sistema de recomendação (função prever_fit())
-- [x] Deploy local (FastAPI + Streamlit)
-
-## Resultado principal
-
-Modelo BERTimbau fine-tuned para prever compatibilidade (fit_percentual, 0-100)
-entre uma vaga e o perfil profissional do autor:
-
-| Métrica | Baseline ingênuo | BERTimbau fine-tuned | Melhoria |
-|---|---|---|---|
-| MAE | 25.22 | **12.36** | 51.0% |
-| RMSE | 27.62 | **15.61** | 43.5% |
-
-## Demonstração
+Modelo de NLP que lê a descrição de uma vaga em português e prevê um **fit de 0 a 100** com o meu perfil profissional.
+Nasceu da minha própria busca por uma vaga júnior em Ciência de Dados: em vez de ler centenas de vagas, treinei um modelo para priorizá-las.
 
 ![Interface Streamlit](notebooks/streamlit_demo.png)
-*(adicione um print da interface funcionando aqui)*
 
-## Como rodar o projeto
+## Resultado
 
-### 1. Clonar o repositório
-\`\`\`bash
+Avaliado em 33 vagas de validação que o modelo não viu no treino:
+
+| Métrica | Baseline (média do treino) | BERTimbau fine-tuned | Melhoria |
+|---|---|---|---|
+| MAE | 25,22 | **12,36** | −51,0% |
+| RMSE | 27,62 | **15,61** | −43,5% |
+
+Na prática, o modelo erra o fit em cerca de 12 pontos, em média, contra 25 de um chute pela média.
+
+## Como foi feito
+
+| Etapa | Notebook | O que acontece |
+|---|---|---|
+| 1. Dados e EDA | `01_EDA_JobMatchAI.ipynb` | 162 vagas reais (15 coletadas à mão + 147 via API Adzuna), limpeza e análise da distribuição do fit |
+| 2. Tokenização | `02_Tokenizacao_BERTimbau.ipynb` | Validação do limite de tokens: todas as vagas cabem em 512 tokens; só 0,81% de tokens `[UNK]` |
+| 3. Embeddings | `03_Embeddings_Similaridade.ipynb` | Embeddings semânticos e mapas em PCA/UMAP: vagas técnicas e não técnicas se separam bem |
+| 4. Fine-tuning | `04_Fine_tuning_do_BERTimbau.ipynb` | BERTimbau com cabeça de regressão, 4 épocas, GPU T4 (Colab), comparação com baseline |
+| 5. Recomendação | `05_Sistema_de_Recomendação.ipynb` | Função `prever_fit()` que ranqueia vagas novas |
+| 6. Aplicação | `app/` | API FastAPI (`POST /prever-fit`) + interface Streamlit |
+
+![Mapa semântico das vagas (UMAP)](notebooks/mapa_semantico_umap.png)
+
+## Limitações (e o que eu faria a seguir)
+
+- **Dataset pequeno (162 vagas):** é uma prova de conceito com metodologia correta, não um modelo para produção. Próximo passo: ampliar a base e usar validação cruzada.
+- **Regressão à média:** o modelo acerta bem o meio da escala e subestima os extremos (vagas muito boas ou muito ruins).
+- **Senioridade:** o modelo tem dificuldade em diferenciar júnior de pleno dentro da mesma área técnica.
+- **Texto truncado:** a API Adzuna corta as descrições em cerca de 500 caracteres.
+
+## Como rodar
+
+```bash
 git clone https://github.com/edudatalytics/jobmatch-ai.git
 cd jobmatch-ai
-\`\`\`
-
-### 2. Reproduzir o modelo treinado
-O modelo fine-tuned (~500MB) não está versionado neste repositório devido ao
-tamanho. Para reproduzi-lo:
-1. Abra os notebooks 01 a 04 no Google Colab, na ordem
-2. Rode célula por célula (o Notebook 04 salva o modelo em `models/bertimbau_fit_v1/`)
-3. Baixe a pasta do modelo do Google Drive para `models/` neste projeto local
-
-### 3. Rodar a API e a interface
-\`\`\`bash
 pip install -r app/requirements.txt
+```
 
-# Terminal 1
-uvicorn app.main:app --reload
+O modelo treinado (~500 MB) não está no repositório. Para gerá-lo, rode os notebooks 01 a 04 no Google Colab, em ordem; o notebook 04 salva o modelo em `models/bertimbau_fit_v1/`. Depois:
 
-# Terminal 2
-streamlit run app/streamlit_app.py
-\`\`\`
+```bash
+uvicorn app.main:app --reload          # terminal 1 — API em http://localhost:8000/docs
+streamlit run app/streamlit_app.py     # terminal 2 — interface
+```
 
-## Principais descobertas
-- Dataset balanceado: 61 vagas de fit alto, 62 de fit baixo, 39 de fit médio
-- Separação semântica clara entre vagas técnicas e não-técnicas, validada via
-  embeddings e visualização UMAP
-- O fine-tuning reduziu o erro médio em 51% comparado a um baseline ingênuo
-- Limitação identificada: tanto os embeddings quanto o modelo fine-tuned têm
-  dificuldade em capturar nuances de senioridade dentro da mesma área técnica
-- Apenas 0.81% dos tokens gerados são [UNK], majoritariamente por truncamento
-  na fonte de dados (API) — limitação conhecida e documentada
+## Estrutura
 
-## Stack técnica
-Python · Pandas · Scikit-learn · Hugging Face Transformers (BERTimbau) ·
-Sentence-Transformers · PyTorch · FastAPI · Streamlit · Matplotlib · Seaborn ·
-UMAP · Google Colab (GPU T4) · API Adzuna
-
-## Estrutura do projeto
-\`\`\`
+```
 jobmatch-ai/
 ├── app/
-│   ├── main.py              # API FastAPI
-│   └── streamlit_app.py      # Interface visual
+│   ├── main.py               # API FastAPI
+│   ├── streamlit_app.py      # interface
+│   └── requirements.txt
 ├── data/
-│   └── processed/
-│       └── vagas_clean_v2.csv
-├── notebooks/
-│   ├── 01_EDA_JobMatchAI.ipynb
-│   ├── 02_Tokenizacao_BERTimbau.ipynb
-│   ├── 03_Embeddings_Similaridade.ipynb
-│   ├── 04_Fine_tuning_do_BERTimbau.ipynb
-│   └── 05_Sistema_de_Recomendação.ipynb
-└── models/                   # (gerado localmente, não versionado)
-\`\`\`
+│   └── vagas_clean_v2.csv    # 162 vagas rotuladas
+├── notebooks/                # 01 → 05, na ordem do pipeline
+└── models/                   # gerado localmente (não versionado)
+```
 
-## Limitações conhecidas
-- Dataset de 162 vagas é pequeno para deep learning — resultados são uma
-  prova de conceito metodologicamente correta, não um modelo pronto para
-  produção em larga escala
-- O campo `remoto` não pôde ser extraído de forma confiável da API Adzuna
-- Modelo apresenta regressão à média nos extremos da distribuição de fit
+## Stack
+
+Python · Pandas · Hugging Face Transformers (BERTimbau) · Sentence-Transformers · PyTorch · Scikit-learn · UMAP · FastAPI · Streamlit · Google Colab
+
+---
+
+**Eduardo Matos** · [LinkedIn](https://www.linkedin.com/in/matos-eduardo) · [GitHub](https://github.com/edudatalytics)
